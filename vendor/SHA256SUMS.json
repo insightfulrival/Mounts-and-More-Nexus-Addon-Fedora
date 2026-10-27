@@ -1,0 +1,19 @@
+{
+  "vendor/Nexus.h": "e2f01e724309ea1e8f6f2b9d672e1eb801c5c582977a38152c87b9375b1fbec3",
+  "vendor/Mumble.h": "b0b0fd207de5b0a9d96f56b3b411d7c61633d2eddf479e7c3c2c45f59ccf9dad",
+  "vendor/json.hpp": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63",
+  "vendor/json.LICENSE": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603",
+  "vendor/Nexus.LICENSE": "58ff6ffacf86cda218b0b732604d19a32a3219f18af8fac21f8e92048fe8dc7f",
+  "vendor/Mumble.LICENSE": "929a20cb98b4c8b78dff574b9a8420e1cea00f252d63dba051ee7ded61a77ac0",
+  "vendor/imgui/imgui.h": "8db9a87e4bb1016b51c9c558adfb6992017c7e3d042209f13a8673b5f6152243",
+  "vendor/imgui/imgui.cpp": "4fb2da291d47f83bfb10f19bb167a58fd10ff67a1411d7a8a8f76997f63023d2",
+  "vendor/imgui/imgui_draw.cpp": "85ef5b23bf9eb620444de8af39fd22e84cba0c43375e81be4ff46e7f4602cb93",
+  "vendor/imgui/imgui_widgets.cpp": "ac9e286c6163557df743211ab4b14330aeea85da53e76addf5d71a1f11ce3951",
+  "vendor/imgui/imgui_tables.cpp": "5701fb9dc674b9d05828f71e7f162a96e5a51aafef5032c27282c8475f197370",
+  "vendor/imgui/imgui_internal.h": "13b306520bbd833dd6b9e69adaf5d2272c8159569dae0a695909905022197824",
+  "vendor/imgui/imconfig.h": "fd95fb62ef80196eb8fd6118453bb4806ad294c43eb38acc5acdfa534de81ba8",
+  "vendor/imgui/imstb_rectpack.h": "61eb7950e45d4831faac6629a727ac464ddcfcf199eb27a7b47de02b898ab6ef",
+  "vendor/imgui/imstb_textedit.h": "fd8408584842d13ca4a3f5b002a77c80491626d289a96463ba52c11981816024",
+  "vendor/imgui/imstb_truetype.h": "80d0c57447b403617fdddccbffb8da509fa3f7d7db5b3aacd9b733061d5a3f67",
+  "vendor/imgui/LICENSE.txt": "fbb51424cf27ca216445d4b472c6aac187ebd8200f7ef41bd845a7d36d54e2c4"
+}
