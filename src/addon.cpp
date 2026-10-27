@@ -55,7 +55,7 @@ Snapshot state, previous;
 FallingDetector falling;
 Engine engine;
 bool settingsOpen = false, firstSample = true, changed = false, configWritable = true;
-bool infoPositionRequested = true;
+bool infoPositionRequested = true, showBindingsTab = false;
 bool cursorRestored = false;
 POINT originalCursor{};
 uint32_t lastTick = 0;
@@ -218,11 +218,15 @@ void onBind(const char* id,bool release) {
 void registerBinds() {
     for (const auto& id:bindIds) api->InputBinds_Deregister(id.c_str());
     bindIds.clear();
-    auto add=[](std::string id,const char* key) { bindIds.push_back(id); api->InputBinds_RegisterWithString(id.c_str(),onBind,key); };
-    add("MM_CONTEXT","CTRL+ALT+M"); add("MM_SETTINGS","CTRL+SHIFT+M");
-    add("MM_CANCEL","CTRL+ALT+BACKSPACE");
-    for (int i=0;i<ActionCount;++i) add("MM_ACTION_"+std::to_string(i),"(null)");
-    for (size_t i=0;i<cfg.custom.size();++i) if (!cfg.custom[i].name.empty()) add("MM_RADIAL_"+std::to_string(i),"(null)");
+    auto add=[](std::string id,const char* key,const std::string& label) {
+        bindIds.push_back(id);
+        api->Localization_Set(id.c_str(),"en",label.c_str());
+        api->InputBinds_RegisterWithString(id.c_str(),onBind,key);
+    };
+    add("MM_CONTEXT","CTRL+ALT+M","Mounts & More: Main radial (hold)"); add("MM_SETTINGS","CTRL+SHIFT+M","Mounts & More: Settings");
+    add("MM_CANCEL","CTRL+ALT+BACKSPACE","Mounts & More: Cancel pending action");
+    for (int i=0;i<ActionCount;++i) add("MM_ACTION_"+std::to_string(i),"(null)",std::string("Mounts & More: ")+name(i));
+    for (size_t i=0;i<cfg.custom.size();++i) if (!cfg.custom[i].name.empty()) add("MM_RADIAL_"+std::to_string(i),"(null)","Mounts & More: Custom radial - "+cfg.custom[i].name);
 }
 void refreshTextures() {
     static unsigned generation=0; ++generation;
@@ -285,7 +289,11 @@ void send(int action) {
     used[action]=++serial;
 }
 void execute(int action,bool fromUI=false,bool unconditional=false) {
-    if (!bound(action) || !inputAllowed()) return;
+    if (!validAction(action) || !inputAllowed()) return;
+    if (!bound(action)) {
+        status=std::string(name(action))+": assign its GW2 key in Nexus > Binds > Guild Wars 2.";
+        settingsOpen=true; showBindingsTab=true; return;
+    }
     int ready=engine.request(action,state,options(),unconditional);
     if (!validAction(ready)) return;
     if (fromUI && isGroundTargeted(ready) && cfg.groundMode!=0) {
@@ -324,7 +332,7 @@ void showRadial() {
     radial.waiting=false;
     auto& p=radial.profile;
     radial.actions.clear();
-    for (int a:p.actions) if (bound(a) && !(cfg.tapMs>0 && a==p.tapAction)) radial.actions.push_back(a);
+    for (int a:p.actions) if (validAction(a) && !(cfg.tapMs>0 && bound(a) && a==p.tapAction)) radial.actions.push_back(a);
     if (p.instantSingle && radial.actions.size()==1) { execute(radial.actions.front(),false,p.unconditional); radial.held=false; return; }
     if (cfg.defaultOnly) { execute(p.defaultAction,false,p.unconditional); radial.held=false; return; }
     if (nexus && nexus->IsCameraMoving && bound(p.defaultAction)) { execute(p.defaultAction); radial.held=false; return; }
@@ -440,7 +448,7 @@ void drawRadial() {
         drawIcon(radial.actions[i],position,size,selected==radial.actions[i]?1:cfg.opacity,selected==radial.actions[i]);
     }
     if (radial.center>=0) drawIcon(radial.center,ImVec2(radial.origin.x-size/2,radial.origin.y-size/2),size,selected==radial.center?1:cfg.opacity,selected==radial.center);
-    std::string caption=radial.actions.empty() && radial.center<0 ? "No bound actions. Configure GW2/Nexus game binds." : radial.profile.name+"  |  "+name(selected);
+    std::string caption=radial.actions.empty() && radial.center<0 ? "No bound actions. Configure GW2/Nexus game binds." : radial.profile.name+"  |  "+name(selected)+(validAction(selected) && !bound(selected)?" (key not configured)":"");
     auto textSize=ImGui::CalcTextSize(caption.c_str());
     draw->AddText(ImVec2(radial.origin.x-textSize.x/2,radial.origin.y+radius+size),IM_COL32(255,255,255,255),caption.c_str());
     const auto mouse=ImGui::GetIO().MousePos;
@@ -457,12 +465,12 @@ void drawBars() {
         ImGuiWindowFlags flags=ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNav;
         if (b.locked) flags|=ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove;
         ImGui::Begin(title.c_str(),nullptr,flags);
-        int n=0; for (int a:b.actions) if (bound(a)) {
+        int n=0; for (int a:b.actions) if (validAction(a)) {
             if (n++ && !b.vertical) ImGui::SameLine(0,4);
             ImGui::PushID(a); auto pos=ImGui::GetCursorScreenPos();
             bool click=ImGui::InvisibleButton("icon",ImVec2(b.size,b.size)); bool hover=ImGui::IsItemHovered();
             drawIcon(a,pos,b.size,b.opacity,hover);
-            if (hover) ImGui::SetTooltip("%s",name(a));
+            if (hover) ImGui::SetTooltip("%s%s",name(a),bound(a)?"":" — key not configured; click for setup");
             if (click) execute(a,true);
             ImGui::PopID();
         }
@@ -579,11 +587,29 @@ void drawSettings() {
     ImGui::SetNextWindowSize(ImVec2(740,650),ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Mounts & More — Nexus##MM_SETTINGS",&settingsOpen)) {ImGui::End();return;}
     ImGui::TextUnformatted("Hold Ctrl+Alt+M: contextual radial | Ctrl+Shift+M: settings");
-    ImGui::TextWrapped("Set game action keys in Guild Wars 2 and Nexus > Game Binds. Addon and custom radial shortcuts are in Nexus > Input Binds (MM_*).");
+    ImGui::TextWrapped("Change the main key: Nexus > Binds > Nexus > Mounts & More: Main radial (hold). Click its key combination to rebind it.");
+    if (ImGui::Button("Set up keys / mount bindings")) showBindingsTab=true;
     if (ImGui::Button(changed?"Save settings *":"Save settings")) {save();updateQuickAccess();}
     ImGui::SameLine(); if (ImGui::Button("Cancel all pending actions")) cancelAll();
     if (!status.empty()) ImGui::TextWrapped("%s",status.c_str());
     if (ImGui::BeginTabBar("MM tabs")) {
+        const bool selectBindings=showBindingsTab; showBindingsTab=false;
+        if (ImGui::BeginTabItem("Bindings",nullptr,selectBindings?ImGuiTabItemFlags_SetSelected:0)) {
+            ImGui::TextUnformatted("1. Choose the key that opens the radial");
+            ImGui::TextWrapped("Open Nexus > Binds > Nexus. Under Mounts & More (Fedora port), click the key next to 'Mounts & More: Main radial (hold)' (MM_CONTEXT). Default: Ctrl+Alt+M. Hold to open, release to select.");
+            ImGui::TextWrapped("Settings: 'Mounts & More: Settings' (MM_SETTINGS), default Ctrl+Shift+M. These are defaults; Nexus keeps your changes.");
+            ImGui::Separator();
+            ImGui::TextUnformatted("2. Configure the individual mount keys");
+            ImGui::TextWrapped("In GW2: Options > Control Options > Mounts, assign a different key to each mount you own. In Nexus > Binds > Guild Wars 2, enter the SAME keys for those mounts. Addon shortcuts on the Nexus tab do not replace these game action keys.");
+            ImGui::TextWrapped("All configured icons stay visible. A missing game key opens this setup page instead of silently doing nothing. A detected key does not prove mount ownership.");
+            for (int a=0;a<ActionCount;++a) {
+                ImGui::PushID(a); auto pos=ImGui::GetCursorScreenPos();
+                drawIcon(a,pos,32,1,false); ImGui::Dummy(ImVec2(32,32));ImGui::SameLine();
+                ImGui::Text("%s: %s",name(a),bound(a)?"Game key detected":"Needs game key");
+                ImGui::PopID();
+            }
+            ImGui::EndTabItem();
+        }
         if (ImGui::BeginTabItem("General")) {
             changed|=ImGui::Checkbox("Out of combat queue (PvE only)",&cfg.queue);
             changed|=ImGui::Checkbox("Remount after loading (same character)",&cfg.autoRemount);
@@ -631,7 +657,7 @@ void drawSettings() {
                 ImGui::PushID(static_cast<int>(i));
                 bool remove=false;
                 if (ImGui::CollapsingHeader(cfg.custom[i].name.c_str())) {
-                    ImGui::Text("Nexus Input Bind: MM_RADIAL_%u",static_cast<unsigned>(i));
+                    ImGui::Text("Nexus > Binds > Nexus: MM_RADIAL_%u",static_cast<unsigned>(i));
                     editProfile(cfg.custom[i],false); remove=ImGui::Button("Delete radial");
                 }
                 ImGui::PopID();
@@ -708,7 +734,7 @@ void load(AddonAPI_t* a) {
     api->WndProc_Register(wndProc);
     api->GUI_Register(RT_Render,render); api->GUI_Register(RT_OptionsRender,optionsRender);
     api->GUI_RegisterCloseOnEscape("Mounts & More — Nexus##MM_SETTINGS",&settingsOpen);
-    log(LOGL_INFO,"Loaded Nexus port 0.1.0. Ctrl+Alt+M: radial; Ctrl+Shift+M: settings.");
+    log(LOGL_INFO,"Loaded Nexus port 0.1.1. Ctrl+Alt+M: radial; Ctrl+Shift+M: settings.");
     } catch (const std::exception& e) { accepting=false;log(LOGL_WARNING,std::string("Load failed: ")+e.what()); }
 }
 void unload() {
@@ -723,7 +749,7 @@ void unload() {
     {std::lock_guard<std::mutex> guard(eventMutex);events.clear();}
     log(LOGL_INFO,"Unloaded; pending actions cancelled.");
 }
-AddonDefinition_t definition{Signature,NEXUS_API_VERSION,"Mounts & More (Fedora port)",{0,1,0,0},
+AddonDefinition_t definition{Signature,NEXUS_API_VERSION,"Mounts & More (Fedora port)",{0,1,1,0},
     "Manlaan, Bennieboj; Nexus adaptation","Contextual mounts, mastery skills and novelties",load,unload,AF_None,UP_None,nullptr};
 } // namespace
 extern "C" __declspec(dllexport) AddonDefinition_t* GetAddonDef() {return &definition;}

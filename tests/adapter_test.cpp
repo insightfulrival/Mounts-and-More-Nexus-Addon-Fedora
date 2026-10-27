@@ -17,6 +17,8 @@ bool groundPreview=false;
 int groundPlacements=0;
 std::map<std::string,INPUTBINDS_PROCESS> binds;
 std::set<GUI_RENDER> callbacks;
+std::map<std::string,std::string> labels;
+void localize(const char* id,const char*,const char* value) {labels[id]=value;}
 bool available[ActionCount];
 void* allocate(size_t n,void*) {return std::malloc(n);}
 void deallocate(void* p,void*) {std::free(p);}
@@ -43,7 +45,8 @@ void escape(const char*,bool*) {}
 void removeEscape(const char*) {}
 void quick(const char*,const char*,const char*,const char*,const char*) {}
 void removeQuick(const char*) {}
-Texture_t* texture(const char*) {return nullptr;}
+std::set<std::string> drawnIcons;
+Texture_t* texture(const char* id) {drawnIcons.insert(id);return nullptr;}
 Texture_t* file(const char*,const char*) {return nullptr;}
 void frame(ImVec2 mouse=ImVec2(400,300)) {
     data.UITick++;
@@ -59,6 +62,7 @@ void setup() {
     api.ImguiMalloc=reinterpret_cast<void*>(allocate);api.ImguiFree=reinterpret_cast<void*>(deallocate);
     api.Paths_GetAddonDirectory=path;api.Log=log;api.DataLink_Get=datalink;
     api.GameBinds_IsBound=bound;api.GameBinds_InvokeAsync=invoke;api.GameBinds_Press=press;api.GameBinds_Release=release;
+    api.Localization_Set=localize;
     api.InputBinds_RegisterWithString=reg;api.InputBinds_Deregister=dereg;
     api.GUI_Register=addRender;api.GUI_Deregister=remRender;
     api.WndProc_Register=window;api.WndProc_Deregister=window;
@@ -83,6 +87,18 @@ int main(int argc,char** argv) {
     static_assert(offsetof(AddonAPI_t,GUI_Register)==32);
     std::filesystem::remove_all("C:\\mounts-adapter-test");
     mock::setup();assert(accepting && mock::callbacks.size()==2 && mock::binds.size()==24);
+    // A fresh Nexus setup must still show the configured mounts before game binds exist.
+    std::fill(std::begin(mock::available),std::end(mock::available),false);
+    mock::drawnIcons.clear();mock::frame();
+    for (int a=Raptor;a<=Turtle;++a) assert(mock::drawnIcons.count(textureIds[a]));
+    cfg.tapMs=0;mock::bind("MM_CONTEXT");mock::frame();
+    assert(radial.visible && radial.actions.size()==9);
+    mock::sent.clear();mock::bind("MM_CONTEXT",true);mock::frame(ImVec2(700,400));
+    assert(mock::sent.empty() && settingsOpen);
+    assert(mock::labels["MM_CONTEXT"]=="Mounts & More: Main radial (hold)");
+    for (const auto& id:bindIds) assert(!mock::labels[id].empty());
+    settingsOpen=false;showBindingsTab=false;
+    std::fill(std::begin(mock::available),std::end(mock::available),true);
     for (int a=0;a<ActionCount;++a) {mock::sent.clear();mock::bind("MM_ACTION_"+std::to_string(a));mock::frame();assert(mock::sent.size()==1 && mock::sent[0]==gameBinds[a]);}
     // Chat, map and focus gates prevent all injection.
     mock::sent.clear();mock::data.Context.IsTextboxFocused=1;mock::bind("MM_ACTION_0");mock::frame();assert(mock::sent.empty());

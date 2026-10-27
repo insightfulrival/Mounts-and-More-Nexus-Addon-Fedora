@@ -22,8 +22,8 @@ for name in ('README.md', 'THIRD_PARTY.md'):
         files.append(dest)
 manifest = {str(p.relative_to(dist)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 (dist/'SHA256SUMS.json').write_text(json.dumps(manifest, indent=2)+'\n')
-with zipfile.ZipFile(dist/'MountsNexus-local-0.1.0.zip','w',zipfile.ZIP_DEFLATED) as archive:
+with zipfile.ZipFile(dist/'MountsNexus-local-0.1.1.zip','w',zipfile.ZIP_DEFLATED) as archive:
     for path in files:
         archive.write(path, str(path.relative_to(dist)))
     archive.write(dist/'SHA256SUMS.json','SHA256SUMS.json')
-print(f'Packaged {len(files)} files: {dist}/MountsNexus-local-0.1.0.zip')
+print(f'Packaged {len(files)} files: {dist}/MountsNexus-local-0.1.1.zip')

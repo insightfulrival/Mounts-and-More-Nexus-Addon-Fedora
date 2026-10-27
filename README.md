@@ -6,7 +6,7 @@ This addon is a **Windows x64 DLL built on Fedora**. It runs inside GW2 through 
 
 ## Status
 
-Development build **0.1.0**. Native core tests and Windows adapter tests run successfully with assertions enabled, including loading the actual DLL through Wine against a simulated Nexus API. Full visual and gameplay acceptance testing in GW2 is still pending. This is not a claim of complete in-game parity.
+Development build **0.1.1**. Native core tests and Windows adapter tests run successfully with assertions enabled, including loading the actual DLL through Wine against a simulated Nexus API. Full visual and gameplay acceptance testing in GW2 is still pending. This is not a claim of complete in-game parity.
 
 ## Features
 
@@ -35,7 +35,7 @@ The build generates lake data, runs native tests, compiles the addon and Windows
 Outputs:
 
 - `dist/MountsNexus.dll`
-- `dist/MountsNexus-local-0.1.0.zip`
+- `dist/MountsNexus-local-0.1.1.zip`
 - `dist/SHA256SUMS.json`
 
 ## Install
@@ -61,7 +61,9 @@ In **Nexus → Addons**, refresh the list and load **Mounts & More (Fedora port)
 | **Ctrl+Alt+Backspace** | Cancel pending actions |
 | **Escape** | Cancel radial or pending ground targeting |
 
-Configure action keys in GW2 and **Nexus → Game Binds**. Change addon shortcuts in **Nexus → Input Binds**, under `MM_*`. A configured bind does not establish mount ownership or skill availability.
+Configure action keys in GW2 and **Nexus → Binds → Guild Wars 2**. Change addon shortcuts in **Nexus → Binds → Nexus**, under **Mounts & More (Fedora port)**. Click the key beside **Mounts & More: Main radial (hold)** (`MM_CONTEXT`) to change the main shortcut. A configured bind does not establish mount ownership or skill availability.
+
+The **Bindings** tab in addon settings explains both steps and shows the game-key status of every action. Mount icons stay visible before keys are configured; selecting an unbound action opens setup without sending input to GW2.
 
 Settings are stored in `addons/MountsNexus/settings.json`. Use Save in the settings window; remaining changes are also saved on unload. Invalid or unsupported settings files are preserved rather than overwritten.
 
